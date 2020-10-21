@@ -1,6 +1,6 @@
 # Haper hooks
 haper-hooks is a small library with three React hooks for easier data fetching from REST APIs.
-For better performance in SPA applications hooks automatically cancels requests initialized in already unmounted components
+For better performance in SPA applications hooks automatically detects already unmounted components and cancels requests initialized by them
 
 ## Install
 ```sh
