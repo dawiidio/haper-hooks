@@ -122,7 +122,7 @@ function UserProfile() {
         loading, //bool
         data: user, // User
         error, // Error | 'cancel'
-    } = useCollection<User>('/user');
+    } = useEntity<User>('/user');
 
     return (
         <div>
