@@ -78,7 +78,9 @@ export interface PaginationFields {
     totalPages: number
 }
 
-export interface PaginationDataIn extends GetDataBaseArgs, PaginationFields {}
+export interface PaginationDataIn<T> extends GetDataBaseArgs, PaginationFields {
+    data: T[]|undefined
+}
 
 export function useQueryCollection<T>(getData: (args: GetDataBaseArgs) => Promise<T[]>, reloadArguments: any[] = []): {
     data: T[]|undefined,
@@ -94,7 +96,7 @@ export function useQueryEntity<T>(getData: (args: GetDataBaseArgs) => Promise<T>
     cancel: () => void
 };
 
-export function useQueryCollectionWithPagination<T>(getData: (args: PaginationDataIn) => Promise<PaginationDataOut<T>>, initialPaginationData: Partial<Omit<Omit<PaginationFields, "total">, "totalPages">> = {}, reloadArguments: any[] = []): {
+export function useQueryCollectionWithPagination<T>(getData: (args: PaginationDataIn<T>) => Promise<PaginationDataOut<T>>, initialPaginationData: Partial<Omit<Omit<PaginationFields, "total">, "totalPages">> = {}, reloadArguments: any[] = []): {
     data: T[]|undefined,
     error: Error|undefined
     loading: boolean
