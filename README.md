@@ -280,8 +280,7 @@ Example:
 ```typescript jsx
 import { useQueryCollection } from 'haper-hooks';
 
-// useQuery* first param of hook is always getData function which
-// is called on each reload and must return promise with data indicated in generic type of hook
+// useQuery* first param of hook is always getData function which fetch data for hook and returns it in a required by hook shape
 const {
         data,
         loading,
@@ -321,8 +320,7 @@ Example:
 ```typescript jsx
 import { useQueryCollectionWithPagination } from 'haper-hooks';
 
-// useQuery* first param of hook is always getData function which
-// is called on each reload and must return promise with data indicated in generic type of hook
+// useQuery* first param of hook is always getData function which fetch data for hook and returns it in a required by hook shape
 const {
         data,
         loading,
@@ -346,7 +344,7 @@ const {
             page: pageNumber
         }, requestId);
 
-        // every getData function in useQueryCollectionWithPagination hook must return object in below shape
+        // getData function in useQueryCollectionWithPagination hook must return object in below shape
         return {
             total,
             data
@@ -394,8 +392,7 @@ Example:
 ```typescript jsx
 import { useQueryCollection } from 'haper-hooks';
 
-// useQuery* first param of hook is always getData function which
-// is called on each reload and must return promise with data indicated in generic type of hook
+// useQuery* first param of hook is always getData function which fetch data for hook and returns it in a required by hook shape
 const {
         data,
         loading,
@@ -493,4 +490,39 @@ render(
     </HaperProvider>,
     document.getElementById('root')
 )
+```
+
+#### Custom arguments for endpoint and useQuery hook
+You may need to add a custom param from outside of a hook to you fetching function,
+and fetch data on it's changes. Below very simple solution for this problem:
+
+Example:
+```typescript jsx
+import { useQueryCollection } from 'haper-hooks'; 
+import { useState } from "react";
+
+
+function MyCmp() {
+    const [name, setName] = useState<string>();
+
+    const {
+        data,
+        loading,
+        error,
+        cancel
+    } = useQueryCollection<User>(
+        async ({ requestId }) => {
+            return await getUser({ id: 1, name }, requestId);
+        },
+        // like in other hooks you can pass array of values on which change hook will reload
+        [name]
+    );
+    
+
+    return (
+        <button onClick={() => setName('David')}>Set name to David</button>
+    );
+}
+
+
 ```
