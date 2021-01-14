@@ -1,6 +1,6 @@
 # Haper hooks
-haper-hooks is a small library with three React hooks for easier data fetching from REST APIs.
-For better performance in SPA applications hooks automatically detects already unmounted components and cancels requests initialized by them
+haper-hooks is a small library with a few React hooks for easier data fetching from REST APIs.
+For better performance in SPA applications hooks automatically detects already unmounted components and cancels requests initialized by them if any is pending
 
 ## Install
 ```sh
@@ -265,9 +265,12 @@ export const getUsersList = api.get<ApiList<User>, UserListParams>(`/employee/us
 
 async function main() {
     // you can use fetching function even without hooks, hooks are just additional layer
-    const users = await getUsersList();
+    const usersResponse = await getUsersList({
+       size: 10,
+       offset: 0
+    });
     
-    console.log(users);
+    console.log(usersResponse); // { total: 100, data: [10xUser] }
 }
 
 main();
