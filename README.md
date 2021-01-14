@@ -265,9 +265,12 @@ export const getUsersList = api.get<ApiList<User>, UserListParams>(`/employee/us
 
 async function main() {
     // you can use fetching function even without hooks, hooks are just additional layer
-    const users = await getUsersList();
+    const usersResponse = await getUsersList({
+       size: 10,
+       offset: 0
+    });
     
-    console.log(users);
+    console.log(usersResponse); // { total: 100, data: [10xUser] }
 }
 
 main();
