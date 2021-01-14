@@ -316,7 +316,7 @@ Returned object
 | cancel      | () => any                                                        | cancels current request if pending                               |
 
 
-#### useQueryCollection
+#### useQueryCollectionWithPagination
 Example:
 ```typescript jsx
 import { useQueryCollectionWithPagination } from 'haper-hooks';
