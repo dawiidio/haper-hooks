@@ -58,5 +58,56 @@ export function useEntity<T, P = {}, E = Error>(
     reload: (newParams?: Partial<P>) => any
 }
 
+export interface PaginationDataOut<T> {
+    data: T[]
+    total: number
+    pageSize?: number
+    pageNumber?: number
+    totalPages?: number
+}
+
+export interface GetDataBaseArgs {
+    requestId: string
+    initial: boolean
+}
+
+export interface PaginationFields {
+    total: number
+    pageSize: number
+    pageNumber: number
+    totalPages: number
+}
+
+export interface PaginationDataIn extends GetDataBaseArgs, PaginationFields {}
+
+export function useQueryCollection<T>(getData: (args: GetDataBaseArgs) => Promise<T[]>, reloadArguments: any[] = []): {
+    data: T[]|undefined,
+    loading: boolean
+    error: Error|undefined
+    cancel: () => void
+};
+
+export function useQueryEntity<T>(getData: (args: GetDataBaseArgs) => Promise<T>, reloadArguments: any[] = []): {
+    data: T|undefined,
+    loading: boolean
+    error: Error|undefined
+    cancel: () => void
+};
+
+export function useQueryCollectionWithPagination<T>(getData: (args: PaginationDataIn) => Promise<PaginationDataOut<T>>, initialPaginationData: Partial<Omit<Omit<PaginationFields, "total">, "totalPages">> = {}, reloadArguments: any[] = []): {
+    data: T[]|undefined,
+    error: Error|undefined
+    loading: boolean
+    total: number|undefined
+    pageSize: number
+    pageNumber: number
+    totalPages: number|undefined
+    next: () => any
+    prev: () => any
+    cancel: () => void
+    setSize: (size: number) => any
+    setPage: (page: number) => any
+}
+
 export { HaperProvider, haperContext } from './Provider';
 export * from 'haper';

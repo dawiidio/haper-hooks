@@ -1,6 +1,6 @@
 import {useContext, useEffect, useState} from 'react';
 import {haperContext} from "./Provider";
-import {HaperCancelablePromise} from "haper";
+import {createApiBuilder, createHaper, FakerMethod, HaperCancelablePromise, HaperMethodOptions} from "haper";
 import {DefaultPaginationResponse, GenericObject, UseCollectionWitPaginationProps} from "./index.d";
 
 export {haperContext, HaperProvider} from './Provider';
@@ -18,6 +18,266 @@ function useHaperCancelablePromise<T>() {
     }, [promise]);
 
     return setPromise;
+}
+
+function uuidv4() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+export interface GetDataArgs {
+    requestId: string
+    initial: boolean
+}
+
+export function useQueryCollection<T>(getData: (args: GetDataArgs) => Promise<T[]>, reloadArguments: any[] = []) {
+    const haper = useContext(haperContext);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [data, setData] = useState<T[]>();
+    const [error, setError] = useState<Error>();
+    const setPromise = useHaperCancelablePromise<T[]>();
+    const [uuid, setUuid] = useState<string>();
+    const [initial, setInitial] = useState<boolean>(true);
+
+    function cancel() {
+        if (uuid) {
+            const promise = haper?.getRequestPromise(uuid);
+
+            if (promise)
+                promise.cancel();
+        }
+    }
+
+    async function fetchData() {
+        if (loading)
+            return;
+
+        try {
+            setLoading(true);
+            const uv4 = uuidv4();
+            setUuid(uv4);
+
+            const newData = await getData({
+                requestId: uv4,
+                initial
+            });
+
+            setData(newData);
+            setError(undefined);
+        } catch (e) {
+            if (e === 'cancel')
+                return;
+
+            setError(e);
+        } finally {
+            setLoading(false);
+            setUuid(undefined);
+            setInitial(false);
+        }
+    }
+
+    useEffect(() => {
+        if (uuid) {
+            const promise = haper?.getRequestPromise(uuid);
+
+            if (promise)
+                setPromise(promise);
+        }
+    }, [uuid]);
+
+    useEffect(() => {
+        fetchData();
+    }, [...reloadArguments]);
+
+    return {
+        data,
+        loading,
+        error,
+        cancel
+    }
+}
+
+export interface PaginationDataOut<T> {
+    data: T[]
+    total: number
+}
+
+export interface PaginationFields {
+    total: number
+    pageSize: number
+    pageNumber: number
+    totalPages: number
+}
+
+export interface PaginationDataIn<T> extends GetDataArgs, PaginationFields {
+    data?: T[]
+}
+
+export function useQueryCollectionWithPagination<T>(getData: (args: PaginationDataIn<T>) => Promise<PaginationDataOut<T>>, initialPaginationData: Partial<Omit<Omit<PaginationFields, "total">, "totalPages">>, reloadArguments: any[] = []) {
+    const haper = useContext(haperContext);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [data, setData] = useState<T[]>();
+    const [error, setError] = useState<Error>();
+    const setPromise = useHaperCancelablePromise<T[]>();
+    const [uuid, setUuid] = useState<string>();
+    const [pageNumber, setPageNumber] = useState<number>(initialPaginationData.pageNumber || 1);
+    const [pageSize, setPageSize] = useState<number>(initialPaginationData.pageSize || 20);
+    const [total, setTotal] = useState<number>(0);
+    const [totalPages, setTotalPages] = useState<number>(0);
+    const [initial, setInitial] = useState<boolean>(true);
+
+    function cancel() {
+        if (uuid) {
+            const promise = haper?.getRequestPromise(uuid);
+
+            if (promise)
+                promise.cancel();
+        }
+    }
+
+    async function fetchData() {
+        if (loading)
+            return;
+
+        try {
+            setLoading(true);
+            const uv4 = uuidv4();
+            setUuid(uv4);
+
+            const paginationDataOut = await getData({
+                requestId: uv4,
+                initial,
+                pageNumber,
+                pageSize,
+                total,
+                totalPages,
+                data
+            });
+
+            setTotal(paginationDataOut.total);
+            setTotalPages(Math.round(paginationDataOut.total / pageSize));
+            setData(paginationDataOut.data);
+            setError(undefined);
+        } catch (e) {
+            if (e === 'cancel')
+                return;
+
+            setError(e);
+        } finally {
+            setLoading(false);
+            setUuid(undefined);
+            setInitial(false);
+        }
+    }
+
+    useEffect(() => {
+        if (uuid) {
+            const promise = haper?.getRequestPromise(uuid);
+
+            if (promise)
+                setPromise(promise);
+        }
+    }, [uuid]);
+
+    useEffect(() => {
+        fetchData();
+    }, [...reloadArguments]);
+
+    return {
+        data,
+        loading,
+        error,
+        setPageSize,
+        pageSize,
+        pageNumber,
+        totalPages,
+        total,
+        cancel,
+        next: () => {
+            if (pageNumber >= totalPages) return;
+
+            setPageNumber(pageNumber + 1);
+        },
+        prev: () => {
+            if (pageNumber === 1) return;
+
+            setPageNumber(pageNumber - 1);
+        },
+        setPage: (page: number) => {
+            if (page < 1 || page >= totalPages) return;
+
+            setPageNumber(page);
+        },
+    }
+}
+
+export function useQueryEntity<T>(getData: (args: GetDataArgs) => Promise<T>, reloadArguments: any[] = []) {
+    const haper = useContext(haperContext);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [data, setData] = useState<T>();
+    const [error, setError] = useState<Error>();
+    const setPromise = useHaperCancelablePromise<T>();
+    const [uuid, setUuid] = useState<string>();
+    const [initial, setInitial] = useState<boolean>(true);
+
+    function cancel() {
+        if (uuid) {
+            const promise = haper?.getRequestPromise(uuid);
+
+            if (promise)
+                promise.cancel();
+        }
+    }
+
+    async function fetchData() {
+        if (loading)
+            return;
+
+        try {
+            setLoading(true);
+            const uv4 = uuidv4();
+            setUuid(uv4);
+
+            const newData = await getData({
+                requestId: uv4,
+                initial
+            });
+
+            setData(newData);
+            setError(undefined);
+        } catch (e) {
+            if (e === 'cancel')
+                return;
+
+            setError(e);
+        } finally {
+            setLoading(false);
+            setUuid(undefined);
+            setInitial(false);
+        }
+    }
+
+    useEffect(() => {
+        if (uuid) {
+            const promise = haper?.getRequestPromise(uuid);
+
+            if (promise)
+                setPromise(promise);
+        }
+    }, [uuid]);
+
+    useEffect(() => {
+        fetchData();
+    }, [...reloadArguments]);
+
+    return {
+        data,
+        loading,
+        error,
+        cancel
+    }
 }
 
 export function useCollection<T, P = {}, E = Error>(
@@ -81,18 +341,17 @@ export function useCollection<T, P = {}, E = Error>(
 }
 
 
-
 export function useCollectionWithPagination<T, PaginationResponse extends GenericObject = DefaultPaginationResponse<T>, Params = {}, E = Error>({
-    endpoint,
-    userParams,
-    currentPage: _currentPage = 1,
-    getTotal = (response) => response.total as number,
-    getData = response => response.data as Array<T>,
-    getPaginationParams = (sizeOffset, userParams) => ({
-        ...sizeOffset,
-        ...(userParams && userParams),
-    })
-}: UseCollectionWitPaginationProps<T, Params, PaginationResponse>) {
+                                                                                                                                                    endpoint,
+                                                                                                                                                    userParams,
+                                                                                                                                                    currentPage: _currentPage = 1,
+                                                                                                                                                    getTotal = (response) => response.total as number,
+                                                                                                                                                    getData = response => response.data as Array<T>,
+                                                                                                                                                    getPaginationParams = (sizeOffset, userParams) => ({
+                                                                                                                                                        ...sizeOffset,
+                                                                                                                                                        ...(userParams && userParams),
+                                                                                                                                                    })
+                                                                                                                                                }: UseCollectionWitPaginationProps<T, Params, PaginationResponse>) {
     const haper = useContext(haperContext);
     const [data, setData] = useState<Array<T>>([]);
     const [loading, setLoading] = useState<boolean>(false);

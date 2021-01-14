@@ -231,6 +231,202 @@ Returned object
 | setPage     | (page:number) => any                                             |                                                                 |
 | reload      | (newParams?: Partial< Params > ,  pageNumber?:  number ) =>  any | reload data with new params                                     |
 
+### Usage with haper api builder
+
+haper gives you additional approach to create api with which you can
+better encapsulate your endpoints and combine them with models in one
+place (if you using TypeScript, which I recommend)
+
+For example you can create endpoint function and indicate model 
+it takes as a parameters and which it will return after run
+
+```typescript jsx
+import {createApiBuilder, createHaper} from 'haper';
+
+const haper = createHaper({});
+const api = createApiBuilder(haper);
+
+interface User {
+    id: number
+    name: string
+}
+
+interface ApiList<T> {
+    total: number,
+    data: T[]
+}
+
+interface UserListParams {
+    size: number,
+    offset: number,
+}
+
+export const getUsersList = api.get<ApiList<User>, UserListParams>(`/employee/users`);
+
+async function main() {
+    // you can use fetching function even without hooks, hooks are just additional layer
+    const users = await getUsersList();
+    
+    console.log(users);
+}
+
+main();
+```
+
+below I present examples of using hooks
+
+#### useQueryCollection
+Example:
+```typescript jsx
+import { useQueryCollection } from 'haper-hooks';
+
+// useQuery* first param of hook is always getData function which
+// is called on each reload and must return promise with data indicated in generic type of hook
+const {
+        data,
+        loading,
+        error,
+        cancel
+    } = useQueryCollection<User>(async ({ requestId }) => {
+        // if you want automatic request cancellation on unmount you need to pass request id to fetching function
+        const tempData = await getUsersList(null, requestId);
+
+        return tempData.data;
+    },
+    // last param of each useQuery hook is an array of parameters on which change hook will reload, just standard scenario
+    []);
+```
+
+Params
+
+| name        | required | type                                          | comment                                                     |   |
+|---------------------|----------|-----------------------------------------------|-------------------------------------------------------------|---|
+| getData        | ✅        | (args: {requestId: string, initial: boolean}) => Promise<T[]>                                        |                                                             |   |
+| array          | ❌        | Array<any>                              |                                               |   |
+
+get data initial param indicates if it's first call on component mount
+
+Returned object
+
+| name        | type                                                             | comment                                                         |
+|-------------|------------------------------------------------------------------|-----------------------------------------------------------------|
+| loading     | boolean                                                          | loading indicator                                                  |
+| data        | Array<T>                                                         | fetched data                                   |
+| error       | Error|undefined                                                  | error                                                           |
+| cancel      | () => any                                                        | cancels current request if pending                               |
+
+
+#### useQueryCollection
+Example:
+```typescript jsx
+import { useQueryCollectionWithPagination } from 'haper-hooks';
+
+// useQuery* first param of hook is always getData function which
+// is called on each reload and must return promise with data indicated in generic type of hook
+const {
+        data,
+        loading,
+        error,
+        setPageSize,
+        pageSize,
+        pageNumber,
+        totalPages,
+        total,
+        cancel,
+        next,
+        prev,
+        setPage,
+    } = useQueryCollectionWithPagination<User>(async ({ requestId, data, total, pageSize, pageNumber, totalPages }) => {
+        // if you want automatic request cancellation on unmount you need to pass request id to fetching function
+        const {
+            total,
+            data
+        } = await getUsersList({ // here we fetching x items for page n
+            size: pageSize,
+            page: pageNumber
+        }, requestId);
+
+        // every getData function in useQueryCollectionWithPagination hook must return object in below shape
+        return {
+            total,
+            data
+        };
+    },
+    //second parameter is object with initial data for pagination
+    {
+        pageSize: 20,
+        pageNumber: 1
+    },
+    // last param of each useQuery hook is an array of parameters on which change hook will reload, just standard scenario
+    []);
+```
+
+Params
+
+| name        | required | type                                          | comment                                                     |   |
+|---------------------|----------|-----------------------------------------------|-------------------------------------------------------------|---|
+| getData        | ✅        | (args: {requestId: string, initial: boolean}) => Promise<T[]>                                        |                                                             |   |
+| initialPaginationData | ❌        | {pageSize: number, pageNumber: number} | pagination initial data                                              |   |
+| array          | ❌        | Array<any>                              |                                               |   |
+
+get data initial param indicates if it's first call on component mount
+
+Returned object
+
+| name        | type                                                             | comment                                                         |
+|-------------|------------------------------------------------------------------|-----------------------------------------------------------------|
+| loading     | boolean                                                          | loading indicator                                                  |
+| data        | Array<T>                                                         | fetched data                                   |
+| error       | Error|undefined                                                  | error                                                           |
+| total      | number                                                    | cancels current request if pending                               |
+| pageSize      | number                                                        | cancels current request if pending                               |
+| pageNumber      | number                                                        | cancels current request if pending                               |
+| totalPages      | number                                                        | cancels current request if pending                               |
+| setSize      | (size: number) => any                                                        | cancels current request if pending                               |
+| setPage      | (page: number) => any                                                        | cancels current request if pending                               |
+| next      | () => any                                                        | cancels current request if pending                               |
+| prev      | () => any                                                        | cancels current request if pending                               |
+| cancel      | () => any                                                        | cancels current request if pending                               |
+
+
+#### useQueryEntity
+Example:
+```typescript jsx
+import { useQueryCollection } from 'haper-hooks';
+
+// useQuery* first param of hook is always getData function which
+// is called on each reload and must return promise with data indicated in generic type of hook
+const {
+        data,
+        loading,
+        error,
+        cancel
+    } = useQueryCollection<User>(async ({ requestId }) => {
+        // if you want automatic request cancellation on unmount you need to pass request id to fetching function
+        return await getUser({ id: 1 }, requestId);
+    },
+    // last param of each useQuery hook is an array of parameters on which change hook will reload, just standard scenario
+    []);
+```
+
+Params
+
+| name        | required | type                                          | comment                                                     |   |
+|---------------------|----------|-----------------------------------------------|-------------------------------------------------------------|---|
+| getData        | ✅        | (args: {requestId: string, initial: boolean}) => Promise<T>                                        |                                                             |   |
+| array          | ❌        | Array<any>                              |                                               |   |
+
+get data initial param indicates if it's first call on component mount
+
+Returned object
+
+| name        | type                                                             | comment                                                         |
+|-------------|------------------------------------------------------------------|-----------------------------------------------------------------|
+| loading     | boolean                                                          | loading indicator                                                  |
+| data        | T|undefined                                                         | fetched data                                   |
+| error       | Error|undefined                                                  | error                                                           |
+| cancel      | () => any                                                        | cancels current request if pending                               |
+
 ## Most common cases
 
 #### Provide custom haper instance
