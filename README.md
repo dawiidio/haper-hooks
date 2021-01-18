@@ -310,8 +310,8 @@ Params
 
 | name        | required | type                                          | comment                                                     |   |
 |---------------------|----------|-----------------------------------------------|-------------------------------------------------------------|---|
-| getData        | ✅        | (args: {requestId: string, initial: boolean, params: Partial<P>}) => Promise<T[]>                                        |                                                             |   |
-| initialParams          | ❌        | Partial<P>                              | initial params                                              |   |
+| getData        | ✅        | (args: {requestId: string, initial: boolean, params: Partial< P >}) => Promise<T[]>                                        |                                                             |   |
+| initialParams          | ❌        | Partial< P >                              | initial params                                              |   |
 
 get data initial param indicates if it's first call on component mount
 
@@ -321,11 +321,11 @@ Returned object
 |-------------|------------------------------------------------------------------|-----------------------------------------------------------------|
 | loading     | boolean                                                          | loading indicator                                                  |
 | initial     | boolean                                                          | is first, initial fetch                                                  |
-| data        | Array<T>                                                         | fetched data                                   |
-| params      | Partial<P>                                                       | current params object                                   |
+| data        | Array< T >                                                         | fetched data                                   |
+| params      | Partial< P >                                                       | current params object                                   |
 | error       | Error|undefined                                                  | error                                                           |
 | cancel      | () => any                                                        | cancels current request if pending                               |
-| mutate      | (params: Partial<P>) => any                                      | changes request params and fetches new data                               |
+| mutate      | (params: Partial< P >) => any                                      | changes request params and fetches new data                               |
 | reload      | () => any                                                        | reload data without changing params                               |
 
 
@@ -380,8 +380,8 @@ Params
 
 | name        | required | type                                          | comment                                                     |   |
 |---------------------|----------|-----------------------------------------------|-------------------------------------------------------------|---|
-| getData        | ✅        | (args: {requestId: string, initial: boolean, params: Partial<P>}) => Promise<T[]>                                        |                                                             |   |
-| initialPaginationData | ❌        | {pageSize: number, pageNumber: number, params: Partial<P>} | pagination initial data                                              |   |
+| getData        | ✅        | (args: {requestId: string, initial: boolean, params: Partial< P >}) => Promise<T[]>                                        |                                                             |   |
+| initialPaginationData | ❌        | {pageSize: number, pageNumber: number, params: Partial< P >} | pagination initial data                                              |   |
 
 get data initial param indicates if it's first call on component mount
 
@@ -390,7 +390,7 @@ Returned object
 | name        | type                                                             | comment                                                         |
 |-------------|------------------------------------------------------------------|-----------------------------------------------------------------|
 | loading     | boolean                                                          | loading indicator                                                  |
-| data        | Array<T>                                                         | fetched data                                   |
+| data        | Array< T >                                                         | fetched data                                   |
 | error       | Error|undefined                                                  | error                                                           |
 | total      | number                                                    | total items number (obtained from response)                               |
 | pageSize      | number                                                        | current page size                               |
@@ -402,7 +402,7 @@ Returned object
 | prev      | () => any                                                        | go to prev page                               |
 | cancel      | () => any                                                        | cancels current request if pending                               |
 | resetData      | () => any                                                        | reset current data                               |
-| mutate      | (params: Partial<p>) => any                                                        | changes request params and fetches new data                                |
+| mutate      | (params: Partial< P >) => any                                                        | changes request params and fetches new data                                |
 
 
 #### useQueryEntity
@@ -428,8 +428,8 @@ Params
 
 | name        | required | type                                          | comment                                                     |   |
 |---------------------|----------|-----------------------------------------------|-------------------------------------------------------------|---|
-| getData        | ✅        | (args: {requestId: string, initial: boolean, params: Partial<P>}) => Promise<T>                                        |                                                             |   |
-| initialParams          | ❌        | Partial<P>                              | initial params                                              |   |
+| getData        | ✅        | (args: {requestId: string, initial: boolean, params: Partial< P >}) => Promise<T>                                        |                                                             |   |
+| initialParams          | ❌        | Partial< P >                              | initial params                                              |   |
 
 
 get data initial param indicates if it's first call on component mount
