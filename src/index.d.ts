@@ -66,49 +66,85 @@ export interface PaginationDataOut<T> {
     totalPages?: number
 }
 
-export interface GetDataBaseArgs {
+export interface GetDataArgs<P = {}> {
     requestId: string
     initial: boolean
+    params: P
 }
 
-export interface PaginationFields {
-    total: number
-    pageSize: number
-    pageNumber: number
-    totalPages: number
-}
-
-export interface PaginationDataIn<T> extends GetDataBaseArgs, PaginationFields {
-    data: T[]|undefined
-}
-
-export function useQueryCollection<T>(getData: (args: GetDataBaseArgs) => Promise<T[]>, reloadArguments: any[] = []): {
+export function useQueryCollection<T, P = {}>(getData: (args: GetDataBaseArgs<Partial<P>>) => Promise<T[]>, initialParams?: Partial<P>): {
     data: T[]|undefined,
     loading: boolean
     error: Error|undefined
     cancel: () => void
+    params: Partial<P>,
+    initial: boolean
+    reload: () => any
+    mutate: (params: Partial<P>) => any
 };
 
-export function useQueryEntity<T>(getData: (args: GetDataBaseArgs) => Promise<T>, reloadArguments: any[] = []): {
+export function useQueryEntity<T, P = {}>(getData: (args: GetDataBaseArgs<Partial<P>>) => Promise<T>, initialParams?: Partial<P>): {
     data: T|undefined,
     loading: boolean
     error: Error|undefined
     cancel: () => void
+    initial: boolean
+    params: Partial<P>,
+    reload: () => any
+    mutate: (params: Partial<P>) => any
 };
 
-export function useQueryCollectionWithPagination<T>(getData: (args: PaginationDataIn<T>) => Promise<PaginationDataOut<T>>, initialPaginationData: Partial<Omit<Omit<PaginationFields, "total">, "totalPages">> = {}, reloadArguments: any[] = []): {
-    data: T[]|undefined,
+interface PublicPaginationData<P = {}> {
+    pageNumber: number
+    pageSize: number
+    params: Partial<P>
+}
+
+export interface GetDataArgs<P = {}> {
+    requestId: string
+    initial: boolean
+    params: P
+}
+
+interface PublicPaginationData<P = {}> {
+    pageNumber: number
+    pageSize: number
+    params: Partial<P>
+}
+
+interface PrivatePaginationData {
+    total: number
+    totalPages: number
+}
+
+export interface PaginationDataOut<T> {
+    data: T[]
+    total: number
+    incremental?: boolean
+    resetData?: boolean
+}
+
+export function useQueryCollectionWithPagination <T, P = {}>
+(
+    getData: (args: PublicPaginationData<P>&PrivatePaginationData&GetDataArgs&{ resetData?: boolean }) => Promise<PaginationDataOut<T>>,
+    initialParams: Partial<PublicPaginationData<P>>
+): {
+    data: T[],
     error: Error|undefined
     loading: boolean
     total: number|undefined
     pageSize: number
     pageNumber: number
     totalPages: number|undefined
-    next: () => any
-    prev: () => any
+    params: P
+    next: () => void
+    prev: () => void
     cancel: () => void
-    setSize: (size: number) => any
-    setPage: (page: number) => any
+    setPageSize: (size: number) => void
+    initial: boolean
+    setPage: (page: number) => void
+    mutate: (data: Partial<PublicPaginationData<P>>&{ resetData?: boolean }) => void
+    resetData: () => void
 }
 
 export { HaperProvider, haperContext } from './Provider';

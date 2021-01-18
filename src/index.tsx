@@ -27,12 +27,13 @@ function uuidv4() {
     });
 }
 
-export interface GetDataArgs {
+export interface GetDataArgs<P = {}> {
     requestId: string
     initial: boolean
+    params: P
 }
 
-export function useQueryCollection<T>(getData: (args: GetDataArgs) => Promise<T[]>, reloadArguments: any[] = []) {
+export function useQueryCollection<T, P = {}>(getData: (args: GetDataArgs<Partial<P>>) => Promise<T[]>, initialParams: Partial<P> = {}) {
     const haper = useContext(haperContext);
     const [loading, setLoading] = useState<boolean>(false);
     const [data, setData] = useState<T[]>();
@@ -40,6 +41,7 @@ export function useQueryCollection<T>(getData: (args: GetDataArgs) => Promise<T[
     const setPromise = useHaperCancelablePromise<T[]>();
     const [uuid, setUuid] = useState<string>();
     const [initial, setInitial] = useState<boolean>(true);
+    const [params, setParams] = useState<Partial<P>>(initialParams);
 
     function cancel() {
         if (uuid) {
@@ -61,7 +63,8 @@ export function useQueryCollection<T>(getData: (args: GetDataArgs) => Promise<T[
 
             const newData = await getData({
                 requestId: uv4,
-                initial
+                initial,
+                params
             });
 
             setData(newData);
@@ -89,131 +92,30 @@ export function useQueryCollection<T>(getData: (args: GetDataArgs) => Promise<T[
 
     useEffect(() => {
         fetchData();
-    }, [...reloadArguments]);
+    }, [params]);
 
     return {
         data,
         loading,
         error,
-        cancel
-    }
-}
-
-export interface PaginationDataOut<T> {
-    data: T[]
-    total: number
-}
-
-export interface PaginationFields {
-    total: number
-    pageSize: number
-    pageNumber: number
-    totalPages: number
-}
-
-export interface PaginationDataIn<T> extends GetDataArgs, PaginationFields {
-    data?: T[]
-}
-
-export function useQueryCollectionWithPagination<T>(getData: (args: PaginationDataIn<T>) => Promise<PaginationDataOut<T>>, initialPaginationData: Partial<Omit<Omit<PaginationFields, "total">, "totalPages">>, reloadArguments: any[] = []) {
-    const haper = useContext(haperContext);
-    const [loading, setLoading] = useState<boolean>(false);
-    const [data, setData] = useState<T[]>();
-    const [error, setError] = useState<Error>();
-    const setPromise = useHaperCancelablePromise<T[]>();
-    const [uuid, setUuid] = useState<string>();
-    const [pageNumber, setPageNumber] = useState<number>(initialPaginationData.pageNumber || 1);
-    const [pageSize, setPageSize] = useState<number>(initialPaginationData.pageSize || 20);
-    const [total, setTotal] = useState<number>(0);
-    const [totalPages, setTotalPages] = useState<number>(0);
-    const [initial, setInitial] = useState<boolean>(true);
-
-    function cancel() {
-        if (uuid) {
-            const promise = haper?.getRequestPromise(uuid);
-
-            if (promise)
-                promise.cancel();
-        }
-    }
-
-    async function fetchData() {
-        if (loading)
-            return;
-
-        try {
-            setLoading(true);
-            const uv4 = uuidv4();
-            setUuid(uv4);
-
-            const paginationDataOut = await getData({
-                requestId: uv4,
-                initial,
-                pageNumber,
-                pageSize,
-                total,
-                totalPages,
-                data
-            });
-
-            setTotal(paginationDataOut.total);
-            setTotalPages(Math.round(paginationDataOut.total / pageSize));
-            setData(paginationDataOut.data);
-            setError(undefined);
-        } catch (e) {
-            if (e === 'cancel')
-                return;
-
-            setError(e);
-        } finally {
-            setLoading(false);
-            setUuid(undefined);
-            setInitial(false);
-        }
-    }
-
-    useEffect(() => {
-        if (uuid) {
-            const promise = haper?.getRequestPromise(uuid);
-
-            if (promise)
-                setPromise(promise);
-        }
-    }, [uuid]);
-
-    useEffect(() => {
-        fetchData();
-    }, [...reloadArguments]);
-
-    return {
-        data,
-        loading,
-        error,
-        setPageSize,
-        pageSize,
-        pageNumber,
-        totalPages,
-        total,
         cancel,
-        next: () => {
-            if (pageNumber >= totalPages) return;
-
-            setPageNumber(pageNumber + 1);
+        initial,
+        params,
+        mutate: (params: Partial<P>) => {
+            setParams((old) => {
+                return {
+                    ...old || {},
+                    ...params,
+                }
+            });
         },
-        prev: () => {
-            if (pageNumber === 1) return;
-
-            setPageNumber(pageNumber - 1);
-        },
-        setPage: (page: number) => {
-            if (page < 1 || page >= totalPages) return;
-
-            setPageNumber(page);
-        },
+        reload: () => {
+            fetchData();
+        }
     }
 }
 
-export function useQueryEntity<T>(getData: (args: GetDataArgs) => Promise<T>, reloadArguments: any[] = []) {
+export function useQueryEntity<T, P = {}>(getData: (args: GetDataArgs<Partial<P>>) => Promise<T>, initialParams: Partial<P> = {}) {
     const haper = useContext(haperContext);
     const [loading, setLoading] = useState<boolean>(false);
     const [data, setData] = useState<T>();
@@ -221,6 +123,7 @@ export function useQueryEntity<T>(getData: (args: GetDataArgs) => Promise<T>, re
     const setPromise = useHaperCancelablePromise<T>();
     const [uuid, setUuid] = useState<string>();
     const [initial, setInitial] = useState<boolean>(true);
+    const [params, setParams] = useState<Partial<P>>(initialParams);
 
     function cancel() {
         if (uuid) {
@@ -242,7 +145,8 @@ export function useQueryEntity<T>(getData: (args: GetDataArgs) => Promise<T>, re
 
             const newData = await getData({
                 requestId: uv4,
-                initial
+                initial,
+                params
             });
 
             setData(newData);
@@ -270,13 +174,185 @@ export function useQueryEntity<T>(getData: (args: GetDataArgs) => Promise<T>, re
 
     useEffect(() => {
         fetchData();
-    }, [...reloadArguments]);
+    }, [params]);
 
     return {
         data,
         loading,
         error,
-        cancel
+        cancel,
+        initial,
+        params,
+        mutate: (params: Partial<P>) => {
+            setParams((old) => {
+                return {
+                    ...old || {},
+                    ...params,
+                }
+            });
+        },
+        reload: () => {
+            fetchData();
+        }
+    }
+}
+
+export interface PaginationDataOut<T> {
+    data: T[]
+    total: number
+    incremental?: boolean
+}
+
+interface PublicPaginationData<P = {}> {
+    pageNumber: number
+    pageSize: number
+    params: Partial<P>
+}
+
+interface PrivatePaginationData {
+    total: number
+    totalPages: number
+}
+
+export function useQueryCollectionWithPagination<T, P = {}>(getData: (args: PublicPaginationData<P>&PrivatePaginationData&GetDataArgs) => Promise<PaginationDataOut<T>>, initialParams: Partial<PublicPaginationData<P>>) {
+    type PaginationData = PublicPaginationData<P>&PrivatePaginationData&{ resetData?: boolean };
+
+    const haper = useContext(haperContext);
+    const setPromise = useHaperCancelablePromise<T[]>();
+    const [uuid, setUuid] = useState<string>();
+    const [initial, setInitial] = useState<boolean>(true);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [data, setData] = useState<T[]>([]);
+    const [error, setError] = useState<Error>();
+
+    const [paginationData, setPaginationData] = useState<PaginationData>({
+        params: initialParams.params || {},
+        pageNumber: initialParams?.pageNumber || 1,
+        pageSize: initialParams?.pageSize || 20,
+        total: 0,
+        totalPages: 0
+    });
+
+    function cancel() {
+        if (uuid) {
+            const promise = haper?.getRequestPromise(uuid);
+
+            if (promise)
+                promise.cancel();
+        }
+    }
+
+    useEffect(() => {
+        if (uuid) {
+            const promise = haper?.getRequestPromise(uuid);
+
+            if (promise)
+                setPromise(promise);
+        }
+    }, [uuid]);
+
+    useEffect(() => {
+        async function fetchData() {
+            if (loading)
+                return;
+
+            try {
+                setLoading(true);
+                const uv4 = uuidv4();
+                setUuid(uv4);
+
+                const paginationDataOut = await getData({
+                    requestId: uv4,
+                    initial,
+                    ...paginationData
+                });
+
+                setData([
+                    ...paginationDataOut.incremental && !paginationData.resetData ? data : [],
+                    ...paginationDataOut.data
+                ]);
+
+                setPaginationData((old) => {
+                    return {
+                        ...old,
+                        resetData: false,
+                        total: paginationDataOut.total,
+                        totalPages: Math.round(paginationDataOut.total / old.pageSize)
+                    }
+                });
+
+                setError(undefined);
+            } catch (e) {
+                if (e === 'cancel')
+                    return;
+
+                setError(e);
+            } finally {
+                setLoading(false);
+                setUuid(undefined);
+                setInitial(false);
+            }
+        }
+
+        fetchData();
+    }, [paginationData]);
+
+    return {
+        data,
+        loading,
+        error,
+        initial,
+        ...paginationData,
+        mutate: (newParams: Partial<PublicPaginationData<P>>&{ resetData?: boolean } = {}) => {
+            setPaginationData((old) => {
+                return ({
+                    ...old,
+                    ...newParams
+                })
+            })
+        },
+        next: () => {
+            setPaginationData((old) => {
+                if (old.pageNumber >= old.totalPages) return old;
+
+                return ({
+                    ...old,
+                    pageNumber: old.pageNumber + 1
+                })
+            });
+        },
+        prev: () => {
+            setPaginationData((old) => {
+                if (old.pageNumber === 1) return old;
+
+                return ({
+                    ...old,
+                    pageNumber: old.pageNumber - 1
+                })
+            });
+        },
+        setPage: (page: number) => {
+            setPaginationData((old) => {
+                if (page < 1 || page >= old.totalPages) return old;
+
+                return ({
+                    ...old,
+                    pageNumber: page
+                })
+            });
+        },
+        setPageSize: (pageSize: number) => {
+            setPaginationData((old) => {
+                return ({
+                    ...old,
+                    pageSize
+                })
+            });
+        },
+        resetData: () => {
+            setData([]);
+        },
+        cancel,
     }
 }
 

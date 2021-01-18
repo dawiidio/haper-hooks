@@ -229,7 +229,7 @@ Returned object
 | next        | () =>  any                                                       | go to next page                                                 |
 | prev        | () => any                                                        | go to prev page                                                 |
 | setPage     | (page:number) => any                                             |                                                                 |
-| reload      | (newParams?: Partial< Params > ,  pageNumber?:  number ) =>  any | reload data with new params                                     |
+| reload      | (newParams?: Partial<Params> ,  pageNumber?:  number ) =>  any | reload data with new params                                     |
 
 ### Usage with haper api builder
 
@@ -259,6 +259,7 @@ interface ApiList<T> {
 interface UserListParams {
     size: number,
     offset: number,
+    search?: string
 }
 
 export const getUsersList = api.get<ApiList<User>, UserListParams>(`/employee/users`);
@@ -289,22 +290,28 @@ const {
         loading,
         error,
         cancel
-    } = useQueryCollection<User>(async ({ requestId }) => {
-        // if you want automatic request cancellation on unmount you need to pass request id to fetching function
-        const tempData = await getUsersList(null, requestId);
-
-        return tempData.data;
-    },
-    // last param of each useQuery hook is an array of parameters on which change hook will reload, just standard scenario
-    []);
+    } = useQueryCollection<User, UserListParams>(
+        // first function is fetching function, it fetches users list by calling haper endpoint defined before
+        async ({ requestId, params }) => {
+            // if you want automatic request cancellation on unmount you need to pass request id to fetching function
+            const tempData = await getUsersList(params, requestId);
+    
+            return tempData.data; // in useQueryCollection we need to return only array of T, so here we returning it
+        },
+        // as a second argument you can pass initial values for params object 
+        {
+            offset: 0,
+            size: 10
+        }
+    );
 ```
 
 Params
 
 | name        | required | type                                          | comment                                                     |   |
 |---------------------|----------|-----------------------------------------------|-------------------------------------------------------------|---|
-| getData        | ✅        | (args: {requestId: string, initial: boolean}) => Promise<T[]>                                        |                                                             |   |
-| array          | ❌        | Array<any>                              |                                               |   |
+| getData        | ✅        | (args: {requestId: string, initial: boolean, params: Partial<P>}) => Promise<T[]>                                        |                                                             |   |
+| initialParams          | ❌        | Partial<P>                              | initial params                                              |   |
 
 get data initial param indicates if it's first call on component mount
 
@@ -313,9 +320,13 @@ Returned object
 | name        | type                                                             | comment                                                         |
 |-------------|------------------------------------------------------------------|-----------------------------------------------------------------|
 | loading     | boolean                                                          | loading indicator                                                  |
+| initial     | boolean                                                          | is first, initial fetch                                                  |
 | data        | Array<T>                                                         | fetched data                                   |
+| params      | Partial<P>                                                       | current params object                                   |
 | error       | Error|undefined                                                  | error                                                           |
 | cancel      | () => any                                                        | cancels current request if pending                               |
+| mutate      | (params: Partial<P>) => any                                      | changes request params and fetches new data                               |
+| reload      | () => any                                                        | reload data without changing params                               |
 
 
 #### useQueryCollectionWithPagination
@@ -325,50 +336,52 @@ import { useQueryCollectionWithPagination } from 'haper-hooks';
 
 // useQuery* first param of hook is always getData function which fetch data for hook and returns it in a required by hook shape
 const {
-        data,
-        loading,
-        error,
-        setPageSize,
-        pageSize,
-        pageNumber,
-        totalPages,
-        total,
-        cancel,
-        next,
-        prev,
-        setPage,
-    } = useQueryCollectionWithPagination<User>(async ({ requestId, data, total, pageSize, pageNumber, totalPages }) => {
-        // if you want automatic request cancellation on unmount you need to pass request id to fetching function
-        const {
-            total,
-            data
-        } = await getUsersList({ // here we fetching x items for page n
+    data,
+    next,
+    pageNumber,
+    params,
+    prev,
+    setPageSize,
+    mutate,
+    loading,
+    pageSize,
+    initial,
+    total,
+} = useQueryCollectionWithPagination<User, UserListParams>(
+     ({ pageSize, pageNumber, params }) => {
+        return getUsersList(JSON.parse(JSON.stringify({
+            ...params,
+            offset: pageNumber * pageSize,
             size: pageSize,
-            page: pageNumber
-        }, requestId);
-
-        // getData function in useQueryCollectionWithPagination hook must return object in below shape
-        return {
-            total,
-            data
-        };
+        })));
     },
-    //second parameter is object with initial data for pagination
     {
         pageSize: 20,
-        pageNumber: 1
+        pageNumber: 1,
     },
-    // last param of each useQuery hook is an array of parameters on which change hook will reload, just standard scenario
-    []);
+);
+
+function goToNextPage() {
+    next();
+}
+
+function filterByName(name: string) {
+  mutate({
+    pageNumber: 1,
+    resetData: true,
+    params: {
+        search: name
+    }
+  });
+}
 ```
 
 Params
 
 | name        | required | type                                          | comment                                                     |   |
 |---------------------|----------|-----------------------------------------------|-------------------------------------------------------------|---|
-| getData        | ✅        | (args: {requestId: string, initial: boolean}) => Promise<T[]>                                        |                                                             |   |
-| initialPaginationData | ❌        | {pageSize: number, pageNumber: number} | pagination initial data                                              |   |
-| array          | ❌        | Array<any>                              |                                               |   |
+| getData        | ✅        | (args: {requestId: string, initial: boolean, params: Partial<P>}) => Promise<T[]>                                        |                                                             |   |
+| initialPaginationData | ❌        | {pageSize: number, pageNumber: number, params: Partial<P>} | pagination initial data                                              |   |
 
 get data initial param indicates if it's first call on component mount
 
@@ -379,15 +392,17 @@ Returned object
 | loading     | boolean                                                          | loading indicator                                                  |
 | data        | Array<T>                                                         | fetched data                                   |
 | error       | Error|undefined                                                  | error                                                           |
-| total      | number                                                    | cancels current request if pending                               |
-| pageSize      | number                                                        | cancels current request if pending                               |
-| pageNumber      | number                                                        | cancels current request if pending                               |
-| totalPages      | number                                                        | cancels current request if pending                               |
-| setSize      | (size: number) => any                                                        | cancels current request if pending                               |
-| setPage      | (page: number) => any                                                        | cancels current request if pending                               |
-| next      | () => any                                                        | cancels current request if pending                               |
-| prev      | () => any                                                        | cancels current request if pending                               |
+| total      | number                                                    | total items number (obtained from response)                               |
+| pageSize      | number                                                        | current page size                               |
+| pageNumber      | number                                                        | current page number                               |
+| totalPages      | number                                                        | total pages (obtained from response)                               |
+| setPageSize      | (size: number) => any                                                        | set items per page                               |
+| setPage      | (page: number) => any                                                        | set current page number                               |
+| next      | () => any                                                        | go to next page                               |
+| prev      | () => any                                                        | go to prev page                               |
 | cancel      | () => any                                                        | cancels current request if pending                               |
+| resetData      | () => any                                                        | reset current data                               |
+| mutate      | (params: Partial<p>) => any                                                        | changes request params and fetches new data                                |
 
 
 #### useQueryEntity
@@ -401,20 +416,21 @@ const {
         loading,
         error,
         cancel
-    } = useQueryCollection<User>(async ({ requestId }) => {
-        // if you want automatic request cancellation on unmount you need to pass request id to fetching function
-        return await getUser({ id: 1 }, requestId);
-    },
-    // last param of each useQuery hook is an array of parameters on which change hook will reload, just standard scenario
-    []);
+    } = useQueryCollection<User, GetUserParams>(
+        ({ requestId, params }) => {
+            // if you want automatic request cancellation on unmount you need to pass request id to fetching function
+            return getUser(params, requestId);
+        },
+    );
 ```
 
 Params
 
 | name        | required | type                                          | comment                                                     |   |
 |---------------------|----------|-----------------------------------------------|-------------------------------------------------------------|---|
-| getData        | ✅        | (args: {requestId: string, initial: boolean}) => Promise<T>                                        |                                                             |   |
-| array          | ❌        | Array<any>                              |                                               |   |
+| getData        | ✅        | (args: {requestId: string, initial: boolean, params: Partial<P>}) => Promise<T>                                        |                                                             |   |
+| initialParams          | ❌        | Partial<P>                              | initial params                                              |   |
+
 
 get data initial param indicates if it's first call on component mount
 
@@ -423,7 +439,7 @@ Returned object
 | name        | type                                                             | comment                                                         |
 |-------------|------------------------------------------------------------------|-----------------------------------------------------------------|
 | loading     | boolean                                                          | loading indicator                                                  |
-| data        | T|undefined                                                         | fetched data                                   |
+| data        | T|undefined                                                      | fetched data                                   |
 | error       | Error|undefined                                                  | error                                                           |
 | cancel      | () => any                                                        | cancels current request if pending                               |
 
@@ -493,39 +509,4 @@ render(
     </HaperProvider>,
     document.getElementById('root')
 )
-```
-
-#### Custom arguments for endpoint and useQuery hook
-You may need to add a custom param from outside of a hook to you fetching function,
-and fetch data on it's changes. Below very simple solution for this problem:
-
-Example:
-```typescript jsx
-import { useQueryCollection } from 'haper-hooks'; 
-import { useState } from "react";
-
-
-function MyCmp() {
-    const [name, setName] = useState<string>();
-
-    const {
-        data,
-        loading,
-        error,
-        cancel
-    } = useQueryCollection<User>(
-        async ({ requestId }) => {
-            return await getUser({ id: 1, name }, requestId);
-        },
-        // like in other hooks you can pass array of values on which change hook will reload
-        [name]
-    );
-    
-
-    return (
-        <button onClick={() => setName('David')}>Set name to David</button>
-    );
-}
-
-
 ```
