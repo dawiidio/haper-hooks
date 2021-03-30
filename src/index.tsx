@@ -313,7 +313,7 @@ export function useQueryCollectionWithPagination<T, P = {}>(getData: (args: Publ
         },
         next: () => {
             setPaginationData((old) => {
-                if (old.pageNumber >= old.totalPages) return old;
+                if (old.pageNumber > old.totalPages) return old;
 
                 return ({
                     ...old,
